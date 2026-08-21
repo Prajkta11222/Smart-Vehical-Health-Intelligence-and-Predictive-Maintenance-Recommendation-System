@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI & OBD-II Predictive Vehicle Health Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+        }
+        h1, h2, h3, h4 {
+            font-family: 'Poppins', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+        /* Glassmorphism utilities */
+        .glass-card {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-height-screen flex flex-col justify-between">
+
+    <header class="glass-card border-b border-slate-800 py-4 px-6 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-cyan-500/10 p-2.5 rounded-xl border border-cyan-500/30">
+                    <i class="fa-solid fa-microchip text-2xl text-cyan-400 animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">AI VEHICLE HEALTH DASHBOARD</h1>
+                    <p class="text-xs text-slate-400 font-medium tracking-wider uppercase">OBD-II & AI Vehicle Maintenance Platform</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="connection-badge" class="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs font-semibold">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    OBD-II CONNECTED (ELM327)
+                </span>
+                <span class="text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-full font-mono border border-slate-700">1Hz Sampling Active</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full p-4 md:p-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <section class="lg:col-span-4 flex flex-col gap-6">
+
+            <div class="glass-card rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <h3 class="font-semibold text-lg text-white flex items-center gap-2">
+                        <i class="fa-solid fa-car text-cyan-400"></i> Vehicle Configuration
+                    </h3>
+                    <i class="fa-solid fa-sliders text-slate-400 text-sm"></i>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Scenario Quick-Load</label>
+                        <select id="scenario-preset" onchange="loadPreset()" class="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40 text-slate-100 font-medium cursor-pointer">
+                            <option value="healthy-ev">Scenario A: Healthy EV Bus (Fleet-309)</option>
+                            <option value="misfire-ice">Scenario B: Overheating ICE Truck (Misfire Engine)</option>
+                            <option value="degraded-ev">Scenario C: Degraded EV Battery Cell (High Delta)</option>
+                            <option value="custom">Scenario D: Custom Setup</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setVehicleClass('car')" id="class-car" class="flex flex-col items-center justify-center p-3 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-medium transition duration-200">
+                            <i class="fa-solid fa-car-side text-lg mb-1.5"></i>
+                            <span class="text-xs">Car</span>
+                        </button>
+                        <button onclick="setVehicleClass('bus')" id="class-bus" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400 font-medium hover:border-slate-700 transition duration-200">
+                            <i class="fa-solid fa-bus text-lg mb-1.5"></i>
+                            <span class="text-xs">Bus</span>
+                        </button>
+                        <button onclick="setVehicleClass('truck')" id="class-truck" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400 font-medium hover:border-slate-700 transition duration-200">
+                            <i class="fa-solid fa-truck-monster text-lg mb-1.5"></i>
+                            <span class="text-xs">Truck</span>
+                        </button>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Powertrain System</label>
+                        <div class="grid grid-cols-2 gap-2 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                            <button onclick="setPowertrain('ev')" id="powertrain-ev" class="py-2 px-3 text-xs font-semibold rounded-md transition duration-200 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-sm">
+                                <i class="fa-solid fa-bolt text-xs mr-1"></i> Electric (EV)
+                            </button>
+                            <button onclick="setPowertrain('ice')" id="powertrain-ice" class="py-2 px-3 text-xs font-semibold rounded-md transition duration-200 text-slate-400 hover:text-white">
+                                <i class="fa-solid fa-gas-pump text-xs mr-1"></i> Fossil Fuel (ICE)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Model Name</label>
+                            <input type="text" id="vehicle-model" value="E-Transit Bus X" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 text-slate-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Odometer (km)</label>
+                            <input type="number" id="vehicle-odometer" value="42150" class="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 text-slate-100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 shadow-xl flex-grow">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <h3 class="font-semibold text-lg text-white flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-cyan-400"></i> Interactive Telemetry Sandbox
+                    </h3>
+                    <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Live Inputs</span>
+                </div>
+
+                <div id="ev-sliders-container" class="flex flex-col gap-4">
+                    <p class="text-xs text-slate-400 mb-2">Adjust live EV metrics below to test how the AI behaves on anomalous CAN streams.</p>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Battery Temp (°C)</span>
+                            <span id="val-ev-battery-temp" class="text-cyan-400 font-mono">35 °C</span>
+                        </div>
+                        <input type="range" id="slide-ev-battery-temp" min="10" max="80" value="35" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Battery SoC (%)</span>
+                            <span id="val-ev-soc" class="text-cyan-400 font-mono">82 %</span>
+                        </div>
+                        <input type="range" id="slide-ev-soc" min="0" max="100" value="82" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Cell Voltage Deviation (ΔV)</span>
+                            <span id="val-ev-deviation" class="text-cyan-400 font-mono">0.02 V</span>
+                        </div>
+                        <input type="range" id="slide-ev-deviation" min="0.01" max="0.30" step="0.01" value="0.02" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Inverter Temperature (°C)</span>
+                            <span id="val-ev-inverter-temp" class="text-cyan-400 font-mono">42 °C</span>
+                        </div>
+                        <input type="range" id="slide-ev-inverter-temp" min="20" max="110" value="42" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+                </div>
+
+                <div id="ice-sliders-container" class="flex flex-col gap-4 hidden">
+                    <p class="text-xs text-slate-400 mb-2">Adjust live Fossil Fuel engine metrics below to trigger mechanical failure diagnostics.</p>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Engine Coolant Temp (°C)</span>
+                            <span id="val-ice-coolant" class="text-cyan-400 font-mono">88 °C</span>
+                        </div>
+                        <input type="range" id="slide-ice-coolant" min="40" max="140" value="88" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Engine RPM</span>
+                            <span id="val-ice-rpm" class="text-cyan-400 font-mono">2200 rpm</span>
+                        </div>
+                        <input type="range" id="slide-ice-rpm" min="0" max="7000" step="100" value="2200" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Alternator Output Voltage (V)</span>
+                            <span id="val-ice-voltage" class="text-cyan-400 font-mono">14.1 V</span>
+                        </div>
+                        <input type="range" id="slide-ice-voltage" min="9.0" max="16.0" step="0.1" value="14.1" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+                            <span>Fuel Trim (%)</span>
+                            <span id="val-ice-fuel-trim" class="text-cyan-400 font-mono">1.2 %</span>
+                        </div>
+                        <input type="range" id="slide-ice-fuel-trim" min="-25" max="35" step="0.5" value="1.2" oninput="updateLiveSim()" class="w-full accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-8 flex flex-col gap-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass-card rounded-2xl p-4 flex items-center gap-4">
+                    <div class="bg-cyan-500/10 p-3 rounded-xl border border-cyan-500/20">
+                        <i id="vehicle-icon-main" class="fa-solid fa-bus text-xl text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Model Status</span>
+                        <h4 id="display-model" class="text-base font-bold text-white leading-tight">E-Transit Bus X</h4>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 flex items-center gap-4">
+                    <div id="alert-bg-icon" class="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                        <i id="alert-indicator-icon" class="fa-solid fa-circle-check text-xl text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Health Threat</span>
+                        <h4 id="alert-status-text" class="text-base font-bold text-emerald-400 leading-tight">NORMAL</h4>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 flex items-center gap-4">
+                    <div class="bg-cyan-500/10 p-3 rounded-xl border border-cyan-500/20">
+                        <i class="fa-solid fa-road text-xl text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Est. Odometer</span>
+                        <h4 id="display-odometer" class="text-base font-bold text-slate-200 leading-tight">42,150 km</h4>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 flex items-center gap-4">
+                    <div class="bg-cyan-500/10 p-3 rounded-xl border border-cyan-500/20">
+                        <i class="fa-solid fa-circle-info text-xl text-cyan-400"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Active DTC Count</span>
+                        <h4 id="dtc-count" class="text-base font-bold text-slate-200 leading-tight">0 Codes</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+                <div class="glass-card rounded-2xl p-5 shadow-xl md:col-span-7 flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-base text-white flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-cyan-400"></i> OBD-II Sensor Waveform Trend
+                        </h3>
+                        <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Dynamic Update</span>
+                    </div>
+                    <div class="h-64 relative w-full flex items-center justify-center">
+                        <canvas id="telemetryChart" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 shadow-xl md:col-span-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-semibold text-base text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-brain text-cyan-400"></i> AI Health Estimation
+                        </h3>
+                    </div>
+                    <div class="flex flex-col items-center justify-center py-4">
+                        <div class="relative flex items-center justify-center">
+                            <svg class="w-32 h-32 transform -rotate-90">
+                                <circle cx="64" cy="64" r="54" stroke="#1f2937" stroke-width="8" fill="transparent" />
+                                <circle id="health-ring" cx="64" cy="64" r="54" stroke="#10b981" stroke-width="8" fill="transparent"
+                                    stroke-dasharray="339.292" stroke-dashoffset="16.9" />
+                            </svg>
+                            <div class="absolute text-center">
+                                <span id="health-score" class="text-3xl font-extrabold text-white">95%</span>
+                                <span class="block text-[10px] text-slate-400 uppercase font-semibold">Health Score</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-800 pt-3">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400 font-medium">Estimated Remaining Useful Life (RUL)</span>
+                            <span id="rul-value" class="text-emerald-400 font-bold">14,200 km</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                            <div id="rul-progress" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 95%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h3 class="font-semibold text-base text-white flex items-center gap-2">
+                            <i class="fa-solid fa-eye text-cyan-400"></i> LIME Explanation Model (Explainable AI)
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">Mathematical feature weight mapping demonstrating diagnostic accountability.</p>
+                    </div>
+                    <span class="text-xs border border-cyan-500/30 text-cyan-300 bg-cyan-500/10 px-2 py-1 rounded-full font-semibold">Local Feature Importance</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+
+                    <div class="md:col-span-12 flex flex-col gap-3">
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold text-slate-400 mb-1">
+                                <span id="feature-lbl-1">Sensor Value A Weight</span>
+                                <span id="feature-val-1" class="font-mono text-emerald-400">- 42% (Normalizing)</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                                <div id="feature-bar-neg-1" class="bg-emerald-500 h-full rounded-l-full transition-all duration-300" style="width: 42%;"></div>
+                                <div id="feature-bar-pos-1" class="bg-rose-500 h-full rounded-r-full transition-all duration-300" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold text-slate-400 mb-1">
+                                <span id="feature-lbl-2">Sensor Value B Weight</span>
+                                <span id="feature-val-2" class="font-mono text-rose-400">+ 15% (Risk Driver)</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                                <div id="feature-bar-neg-2" class="bg-emerald-500 h-full rounded-l-full transition-all duration-300" style="width: 0%;"></div>
+                                <div id="feature-bar-pos-2" class="bg-rose-500 h-full rounded-r-full transition-all duration-300" style="width: 15%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold text-slate-400 mb-1">
+                                <span id="feature-lbl-3">Sensor Value C Weight</span>
+                                <span id="feature-val-3" class="font-mono text-emerald-400">- 10% (Normalizing)</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                                <div id="feature-bar-neg-3" class="bg-emerald-500 h-full rounded-l-full transition-all duration-300" style="width: 10%;"></div>
+                                <div id="feature-bar-pos-3" class="bg-rose-500 h-full rounded-r-full transition-all duration-300" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-semibold text-base text-white mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Logged OBD-II Trouble Codes
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">Captured diagnostic parameters currently flagged on CAN Controller Area Network.</p>
+                    </div>
+
+                    <div class="flex-grow flex flex-col gap-2 overflow-y-auto max-h-32" id="dtc-list">
+                        <div class="flex justify-between items-center bg-slate-900 border border-slate-800/80 p-3 rounded-xl">
+                            <span class="text-xs font-semibold text-emerald-400 font-mono">P0000 - SYSTEM CLEAR</span>
+                            <span class="text-[11px] text-slate-400">All subsystems operating under safe limits</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-semibold text-base text-white mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-wrench text-cyan-400"></i> AI Actionable Intervention Recommendation
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-4">Autonomous recommendation calculated via Predictive Maintenance (PdM) logic.</p>
+                    </div>
+                    <div id="recommendation-box" class="bg-cyan-500/5 border border-cyan-500/20 p-4 rounded-xl flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-cyan-400 text-lg mt-0.5"></i>
+                        <div>
+                            <h4 class="text-xs font-bold text-cyan-300 uppercase tracking-wider">Routine Schedule Valid</h4>
+                            <p class="text-xs text-slate-400 mt-1 leading-relaxed">Continuous telematics validation is active. No urgent workshop mechanical interventions are necessary at this time.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="glass-card border-t border-slate-800 py-4 px-6 text-center text-slate-500 text-xs mt-6">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>&copy; 2026 Vehicle Health Management Platform. All rights reserved.</span>
+            <span class="flex items-center gap-1"><i class="fa-solid fa-graduation-cap text-cyan-500"></i> Computer Science & Engineering Department Project Prototype</span>
+        </div>
+    </footer>
+
+    <script>
+        // State variables
+        let currentVehicleType = 'car';
+        let currentPowertrain = 'ev';
+        let sensorChartInstance = null;
+        let chartDataPoints = Array(20).fill(0);
+        let chartLabels = Array(20).fill('');
+        let timeCount = 0;
+
+        // Telemetry Ranges & Logic
+        function setVehicleClass(cls) {
+            ['car', 'bus', 'truck'].forEach(c => {
+                const btn = document.getElementById(`class-${c}`);
+                if (c === cls) {
+                    btn.classList.add('border-cyan-500/40', 'bg-cyan-500/10', 'text-cyan-300');
+                    btn.classList.remove('border-slate-800', 'bg-slate-900/40', 'text-slate-400');
+                } else {
+                    btn.classList.remove('border-cyan-500/40', 'bg-cyan-500/10', 'text-cyan-300');
+                    btn.classList.add('border-slate-800', 'bg-slate-900/40', 'text-slate-400');
+                }
+            });
+            currentVehicleType = cls;
+
+            // Adjust icons and placeholder text defaults
+            const mainIcon = document.getElementById('vehicle-icon-main');
+            mainIcon.className = `fa-solid text-xl text-cyan-400 ${cls === 'car' ? 'fa-car-side' : cls === 'bus' ? 'fa-bus' : 'fa-truck-monster'}`;
+
+            if (document.getElementById('scenario-preset').value === 'custom') {
+                document.getElementById('vehicle-model').value = `${cls.charAt(0).toUpperCase() + cls.slice(1)} ${currentPowertrain.toUpperCase()} Custom`;
+            }
+            updateLiveSim();
+        }
+
+        function setPowertrain(type) {
+            const evBtn = document.getElementById('powertrain-ev');
+            const iceBtn = document.getElementById('powertrain-ice');
+            const evSliders = document.getElementById('ev-sliders-container');
+            const iceSliders = document.getElementById('ice-sliders-container');
+
+            if (type === 'ev') {
+                evBtn.className = "py-2 px-3 text-xs font-semibold rounded-md transition duration-200 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-sm";
+                iceBtn.className = "py-2 px-3 text-xs font-semibold rounded-md transition duration-200 text-slate-400 hover:text-white";
+                evSliders.classList.remove('hidden');
+                iceSliders.classList.add('hidden');
+                currentPowertrain = 'ev';
+            } else {
+                iceBtn.className = "py-2 px-3 text-xs font-semibold rounded-md transition duration-200 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-sm";
+                evBtn.className = "py-2 px-3 text-xs font-semibold rounded-md transition duration-200 text-slate-400 hover:text-white";
+                iceSliders.classList.remove('hidden');
+                evSliders.classList.add('hidden');
+                currentPowertrain = 'ice';
+            }
+
+            if (document.getElementById('scenario-preset').value === 'custom') {
+                document.getElementById('vehicle-model').value = `${currentVehicleType.charAt(0).toUpperCase() + currentVehicleType.slice(1)} ${currentPowertrain.toUpperCase()} Custom`;
+            }
+            updateLiveSim();
+            initChart(); // Reset chart metrics matching the powertrain
+        }
+
+        // Preset Loading Utility
+        function loadPreset() {
+            const presetVal = document.getElementById('scenario-preset').value;
+            if (presetVal === 'healthy-ev') {
+                document.getElementById('vehicle-model').value = "Fleet-309 E-Bus";
+                document.getElementById('vehicle-odometer').value = "42150";
+                setVehicleClass('bus');
+                setPowertrain('ev');
+                document.getElementById('slide-ev-battery-temp').value = "35";
+                document.getElementById('slide-ev-soc').value = "82";
+                document.getElementById('slide-ev-deviation').value = "0.02";
+                document.getElementById('slide-ev-inverter-temp').value = "42";
+            } else if (presetVal === 'misfire-ice') {
+                document.getElementById('vehicle-model').value = "Delivery D-250 Truck";
+                document.getElementById('vehicle-odometer').value = "112800";
+                setVehicleClass('truck');
+                setPowertrain('ice');
+                document.getElementById('slide-ice-coolant').value = "118";
+                document.getElementById('slide-ice-rpm').value = "5400";
+                document.getElementById('slide-ice-voltage').value = "11.2";
+                document.getElementById('slide-ice-fuel-trim').value = "26.5";
+            } else if (presetVal === 'degraded-ev') {
+                document.getElementById('vehicle-model').value = "Commuter Car Model 3";
+                document.getElementById('vehicle-odometer').value = "85300";
+                setVehicleClass('car');
+                setPowertrain('ev');
+                document.getElementById('slide-ev-battery-temp').value = "62";
+                document.getElementById('slide-ev-soc').value = "21";
+                document.getElementById('slide-ev-deviation').value = "0.22";
+                document.getElementById('slide-ev-inverter-temp').value = "55";
+            }
+            updateLiveSim();
+        }
+
+        // Live Simulation Evaluation
+        function updateLiveSim() {
+            // Read and Sync Slider Values onto GUI text nodes
+            const isEV = (currentPowertrain === 'ev');
+
+            // Dynamic text mappings
+            document.getElementById('display-model').innerText = document.getElementById('vehicle-model').value;
+            const odo = parseInt(document.getElementById('vehicle-odometer').value) || 0;
+            document.getElementById('display-odometer').innerText = odo.toLocaleString() + " km";
+
+            let healthScore = 100;
+            let activeDTCs = [];
+            let mainSensorValue = 0;
+            let sensorUnit = '';
+            let chartLabelName = '';
+
+            let explanationAttributions = [];
+
+            if (isEV) {
+                const battTemp = parseFloat(document.getElementById('slide-ev-battery-temp').value);
+                const soc = parseFloat(document.getElementById('slide-ev-soc').value);
+                const deltaV = parseFloat(document.getElementById('slide-ev-deviation').value);
+                const invTemp = parseFloat(document.getElementById('slide-ev-inverter-temp').value);
+
+                document.getElementById('val-ev-battery-temp').innerText = `${battTemp} °C`;
+                document.getElementById('val-ev-soc').innerText = `${soc} %`;
+                document.getElementById('val-ev-deviation').innerText = `${deltaV} V`;
+                document.getElementById('val-ev-inverter-temp').innerText = `${invTemp} °C`;
+
+                mainSensorValue = battTemp;
+                sensorUnit = '°C';
+                chartLabelName = 'Battery Pack Temp';
+
+                // Evaluate parameters dynamically representing predictive models
+                let battTempRisk = Math.max(0, (battTemp - 45) * 2.2); // Temp threat above 45C
+                let deltaVRisk = deltaV * 180; // High cell discrepancy risk
+                let inverterTempRisk = Math.max(0, (invTemp - 80) * 1.5);
+                let socDrainingRisk = soc < 15 ? (15 - soc) * 2.5 : 0;
+
+                healthScore -= (battTempRisk + deltaVRisk + inverterTempRisk + socDrainingRisk);
+                healthScore = Math.max(2, Math.round(healthScore));
+
+                // Explanations attributions (Attributing feature weights contributing to local decision output)
+                explanationAttributions = [
+                    { name: 'Thermal Vector (Pack Temp)', weight: Math.round(battTempRisk), isDriver: battTemp > 45 },
+                    { name: 'Voltage Delta Divergence', weight: Math.round(deltaVRisk), isDriver: deltaV > 0.08 },
+                    { name: 'Gate Inverter Thermal Load', weight: Math.round(inverterTempRisk), isDriver: invTemp > 80 }
+                ];
+
+                // DTC evaluation logic
+                if (battTemp > 60) {
+                    activeDTCs.push({ code: 'P0A7F', desc: 'Hybrid/EV Battery Pack Deterioration (High Temp Overheat)' });
+                }
+                if (deltaV > 0.15) {
+                    activeDTCs.push({ code: 'P0B24', desc: 'EV Cell Voltage Balance Discrepancy Fault (Asymmetry Detected)' });
+                }
+                if (invTemp > 90) {
+                    activeDTCs.push({ code: 'U0298', desc: 'Lost Communication with DC-DC Converter / Inverter Control' });
+                }
+
+            } else {
+                const coolant = parseFloat(document.getElementById('slide-ice-coolant').value);
+                const rpm = parseFloat(document.getElementById('slide-ice-rpm').value);
+                const voltage = parseFloat(document.getElementById('slide-ice-voltage').value);
+                const trim = parseFloat(document.getElementById('slide-ice-fuel-trim').value);
+
+                document.getElementById('val-ice-coolant').innerText = `${coolant} °C`;
+                document.getElementById('val-ice-rpm').innerText = `${rpm} rpm`;
+                document.getElementById('val-ice-voltage').innerText = `${voltage} V`;
+                document.getElementById('val-ice-fuel-trim').innerText = `${trim} %`;
+
+                mainSensorValue = coolant;
+                sensorUnit = '°C';
+                chartLabelName = 'Coolant System Temp';
+
+                // ICE Predictive calculation simulation
+                let coolantRisk = Math.max(0, (coolant - 100) * 2.5); // Risk of cylinder head overheat
+                let rpmRisk = rpm > 5000 ? (rpm - 5000) * 0.015 : 0;
+                let alternatorRisk = (voltage < 11.5 || voltage > 15.0) ? 35 : 0;
+                let richLeanRisk = Math.abs(trim) > 15 ? Math.abs(trim) * 1.2 : 0;
+
+                healthScore -= (coolantRisk + rpmRisk + alternatorRisk + richLeanRisk);
+                healthScore = Math.max(2, Math.round(healthScore));
+
+                explanationAttributions = [
+                    { name: 'Engine Thermal Index', weight: Math.round(coolantRisk), isDriver: coolant > 100 },
+                    { name: 'ECU Fuel Trim Correction', weight: Math.round(richLeanRisk), isDriver: Math.abs(trim) > 15 },
+                    { name: 'Alternator Charging Voltage', weight: Math.round(alternatorRisk), isDriver: voltage < 11.5 || voltage > 15.0 }
+                ];
+
+                // DTC logic
+                if (coolant > 110) {
+                    activeDTCs.push({ code: 'P0117', desc: 'Engine Coolant Temperature Circuit Malfunction (Low Input)' });
+                }
+                if (rpm > 6200) {
+                    activeDTCs.push({ code: 'P0219', desc: 'Engine Overspeed Mechanical Overstress Imminent State' });
+                }
+                if (voltage < 11.5) {
+                    activeDTCs.push({ code: 'P0562', desc: 'System Low DC Input Charging Under-Voltage Threshold Trigger' });
+                }
+                if (Math.abs(trim) > 20) {
+                    activeDTCs.push({ code: trim > 0 ? 'P0171' : 'P0172', desc: `Fuel System Calibration Deviation (${trim > 0 ? 'System Too Lean' : 'System Too Rich'})` });
+                }
+            }
+
+            // Sync visual UI with calculated Health metrics
+            document.getElementById('health-score').innerText = `${healthScore}%`;
+
+            // Adjust health indicator rings based on score
+            const healthRing = document.getElementById('health-ring');
+            const strokeDashOffset = 339.292 - (339.292 * healthScore / 100);
+            healthRing.setAttribute('stroke-dashoffset', strokeDashOffset);
+
+            const alertBadge = document.getElementById('alert-bg-icon');
+            const alertText = document.getElementById('alert-status-text');
+            const alertIcon = document.getElementById('alert-indicator-icon');
+
+            if (healthScore >= 80) {
+                healthRing.setAttribute('stroke', '#10b981'); // Emerald
+                alertBadge.className = "bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20";
+                alertText.innerText = "NORMAL";
+                alertText.className = "text-base font-bold text-emerald-400 leading-tight";
+                alertIcon.className = "fa-solid fa-circle-check text-xl text-emerald-400";
+            } else if (healthScore >= 50) {
+                healthRing.setAttribute('stroke', '#f59e0b'); // Amber
+                alertBadge.className = "bg-amber-500/10 p-3 rounded-xl border border-amber-500/20";
+                alertText.innerText = "WARNING";
+                alertText.className = "text-base font-bold text-amber-500 leading-tight";
+                alertIcon.className = "fa-solid fa-triangle-exclamation text-xl text-amber-500";
+            } else {
+                healthRing.setAttribute('stroke', '#ef4444'); // Red
+                alertBadge.className = "bg-rose-500/10 p-3 rounded-xl border border-rose-500/20";
+                alertText.innerText = "CRITICAL THREAT";
+                alertText.className = "text-base font-bold text-rose-500 leading-tight";
+                alertIcon.className = "fa-solid fa-circle-exclamation text-xl text-rose-500";
+            }
+
+            // Estimate RUL remaining
+            const baseRul = Math.max(0, healthScore * 180);
+            document.getElementById('rul-value').innerText = `${baseRul.toLocaleString()} km`;
+            const rulProgress = document.getElementById('rul-progress');
+            rulProgress.style.width = `${healthScore}%`;
+            if (healthScore >= 80) {
+                rulProgress.className = "bg-emerald-500 h-full rounded-full transition-all duration-300";
+                document.getElementById('rul-value').className = "text-emerald-400 font-bold";
+            } else if (healthScore >= 50) {
+                rulProgress.className = "bg-amber-500 h-full rounded-full transition-all duration-300";
+                document.getElementById('rul-value').className = "text-amber-500 font-bold";
+            } else {
+                rulProgress.className = "bg-rose-500 h-full rounded-full transition-all duration-300";
+                document.getElementById('rul-value').className = "text-rose-500 font-bold";
+            }
+
+            // Sync explanation attributions
+            explanationAttributions.forEach((attr, idx) => {
+                const step = idx + 1;
+                document.getElementById(`feature-lbl-${step}`).innerText = attr.name;
+                const valueLabel = document.getElementById(`feature-val-${step}`);
+                const negBar = document.getElementById(`feature-bar-neg-${step}`);
+                const posBar = document.getElementById(`feature-bar-pos-${step}`);
+
+                if (attr.isDriver) {
+                    valueLabel.innerText = `+ ${attr.weight}% (Risk Driver)`;
+                    valueLabel.className = "font-mono text-rose-400";
+                    negBar.style.width = '0%';
+                    posBar.style.width = `${Math.min(100, attr.weight * 1.5)}%`;
+                } else {
+                    const normWeight = Math.max(5, 50 - attr.weight);
+                    valueLabel.innerText = `- ${normWeight}% (Normalizing)`;
+                    valueLabel.className = "font-mono text-emerald-400";
+                    negBar.style.width = `${normWeight}%`;
+                    posBar.style.width = '0%';
+                }
+            });
+
+            // Update Logged DTC UI Container
+            const dtcListContainer = document.getElementById('dtc-list');
+            dtcListContainer.innerHTML = '';
+            document.getElementById('dtc-count').innerText = `${activeDTCs.length} ${activeDTCs.length === 1 ? 'Code' : 'Codes'}`;
+
+            if (activeDTCs.length === 0) {
+                dtcListContainer.innerHTML = `
+                    <div class="flex justify-between items-center bg-slate-900 border border-slate-800/80 p-3 rounded-xl">
+                        <span class="text-xs font-semibold text-emerald-400 font-mono">P0000 - SYSTEM CLEAR</span>
+                        <span class="text-[11px] text-slate-400">All subsystems operating under safe limits</span>
+                    </div>
+                `;
+            } else {
+                activeDTCs.forEach(dtc => {
+                    dtcListContainer.innerHTML += `
+                        <div class="flex justify-between items-center bg-slate-900 border border-rose-500/20 p-2.5 rounded-xl">
+                            <span class="text-xs font-semibold text-rose-400 font-mono">${dtc.code}</span>
+                            <span class="text-[11px] text-slate-300 text-right font-medium max-w-[70%] leading-tight">${dtc.desc}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            // Recommendation scheduling text
+            const recBox = document.getElementById('recommendation-box');
+            if (healthScore >= 80) {
+                recBox.className = "bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl flex items-start gap-3";
+                recBox.innerHTML = `
+                    <i class="fa-solid fa-circle-check text-emerald-400 text-lg mt-0.5"></i>
+                    <div>
+                        <h4 class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Routine Schedule Valid</h4>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">No anomalies predicted within the next 2,000 km. Standard telematics tracking continues.</p>
+                    </div>
+                `;
+            } else if (healthScore >= 50) {
+                recBox.className = "bg-amber-500/5 border border-amber-500/20 p-4 rounded-xl flex items-start gap-3";
+                recBox.innerHTML = `
+                    <i class="fa-solid fa-wrench text-amber-400 text-lg mt-0.5"></i>
+                    <div>
+                        <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wider">Scheduled Intervention Advice</h4>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">Schedule a workshop system inspection within the next <strong class="text-amber-400">150 km</strong>. Automated diagnostic alert dispatched to fleet controller.</p>
+                    </div>
+                `;
+            } else {
+                recBox.className = "bg-rose-500/5 border border-rose-500/20 p-4 rounded-xl flex items-start gap-3";
+                recBox.innerHTML = `
+                    <i class="fa-solid fa-triangle-exclamation text-rose-400 text-lg mt-0.5"></i>
+                    <div>
+                        <h4 class="text-xs font-bold text-rose-300 uppercase tracking-wider">IMMEDIATE DOWN-TIME WARNING</h4>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">High mechanical failure risk detected. Park vehicle safely. AI models suggest cooling/battery thermal runaway danger.</p>
+                    </div>
+                `;
+            }
+
+            // Sync with Chart.js live stream data input
+            shiftChartValue(mainSensorValue, chartLabelName);
+        }
+
+        // Real-Time Charting Framework logic
+        function initChart() {
+            const ctx = document.getElementById('telemetryChart').getContext('2d');
+
+            // Clean up previous context instance
+            if (sensorChartInstance !== null) {
+                sensorChartInstance.destroy();
+            }
+
+            const initialColor = currentPowertrain === 'ev' ? '#06b6d4' : '#3b82f6';
+
+            sensorChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: currentPowertrain === 'ev' ? 'EV Battery Pack Temp (°C)' : 'ICE Coolant Temp (°C)',
+                        data: chartDataPoints,
+                        borderColor: initialColor,
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        pointBackgroundColor: initialColor,
+                        fill: true,
+                        backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function shiftChartValue(val, label) {
+            if (!sensorChartInstance) return;
+
+            // Introduce slight measurement random noise for authenticity of OBD-II signals
+            const noise = (Math.random() - 0.5) * 0.4;
+            const targetVal = parseFloat((val + noise).toFixed(2));
+
+            chartDataPoints.push(targetVal);
+            chartDataPoints.shift();
+
+            sensorChartInstance.data.datasets[0].data = chartDataPoints;
+            sensorChartInstance.data.datasets[0].label = label;
+
+            // Adjust theme matching colors
+            const dynamicColor = currentPowertrain === 'ev' ? '#06b6d4' : '#f59e0b';
+            sensorChartInstance.data.datasets[0].borderColor = dynamicColor;
+            sensorChartInstance.data.datasets[0].pointBackgroundColor = dynamicColor;
+
+            sensorChartInstance.update('none'); // Update smoothly without performance lag
+        }
+
+        // Application initialization entrypoint
+        window.onload = function() {
+            // Fill initial time array tags for waveform graph
+            for (let i = 0; i < 20; i++) {
+                chartLabels[i] = `t-${20 - i}s`;
+            }
+            initChart();
+            loadPreset();
+        };
+    </script>
+</body>
+</html>
