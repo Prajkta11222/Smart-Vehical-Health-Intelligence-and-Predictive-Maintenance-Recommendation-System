@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vehicle_health
+      POSTGRES_USER: vehicle
+      POSTGRES_PASSWORD: vehicle
+    ports: ["5432:5432"]
+    volumes: ["vehicle-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vehicle -d vehicle_health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      MODEL_DIR: /models
+      DATASET_PATH: /data/vehicle_dataset.csv
+      DATABASE_URL: postgresql+psycopg://vehicle:vehicle@postgres:5432/vehicle_health
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      LOG_LEVEL: INFO
+    ports: ["8000:8000"]
+    volumes:
+      - "./drive-download-20260820T190522Z-1-001:/models:ro"
+      - "./flex_fuel_predictive_maintenance_dataset_augmented.csv:/data/vehicle_dataset.csv:ro"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  vehicle-db:

@@ -1,0 +1,39 @@
+{
+    "project": "Smart Vehicle Health Intelligence",
+    "deployment_stage": "Stage 9",
+    "final_model": "Random Forest",
+    "final_model_file": "final_selected_model.joblib",
+    "model_type": "RandomForestClassifier",
+    "feature_count": 66,
+    "artifacts": [
+        "final_selected_model.joblib",
+        "random_forest_tuned.joblib",
+        "xgboost_tuned.joblib",
+        "catboost_tuned.joblib",
+        "shap_feature_importance.joblib",
+        "shap_values_class1.joblib",
+        "shap_sample_dense.joblib",
+        "vehicle_health_scores.joblib",
+        "vehicle_health_scores.csv",
+        "vehicle_recommendations.joblib",
+        "vehicle_recommendations.csv"
+    ],
+    "missing_artifacts": [],
+    "health_score_system": {
+        "Excellent": "80-100",
+        "Good": "60-79",
+        "Fair": "40-59",
+        "Poor": "20-39",
+        "Critical": "0-19"
+    },
+    "pipeline": [
+        "Stage 3 - Data Preprocessing",
+        "Stage 4 - Machine Learning Models",
+        "Stage 5 - Hyperparameter Tuning",
+        "Stage 6 - SHAP Explainability",
+        "Stage 7 - Vehicle Health Score",
+        "Stage 8 - Recommendation Engine",
+        "Stage 9 - Deployment Packaging"
+    ],
+    "created_at": "2026-08-20T18:59:14.849426"
+}

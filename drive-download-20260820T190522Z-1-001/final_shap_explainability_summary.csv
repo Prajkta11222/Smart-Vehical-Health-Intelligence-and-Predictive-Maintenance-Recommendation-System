@@ -1,0 +1,4 @@
+Category,Feature,Value,Interpretation
+Global,numeric__Catalytic_Converter_Efficiency_Pct,0.028460595605964617,Strongest global SHAP feature
+Dependence,numeric__Catalytic_Converter_Efficiency_Pct,Higher values generally increase maintenance risk,Strongest dependence-analysis feature
+Individual Vehicle,numeric__Total_Mileage_km,0.05343646150212612,Strongest contributor for selected vehicle

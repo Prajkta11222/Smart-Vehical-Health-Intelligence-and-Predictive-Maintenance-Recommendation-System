@@ -1,0 +1,10 @@
+{
+    "model_file": "final_selected_model.joblib",
+    "feature_count": 66,
+    "health_score_file": "vehicle_health_scores.joblib",
+    "recommendation_file": "vehicle_recommendations.joblib",
+    "shap_importance_file": "shap_feature_importance.joblib",
+    "classification_target": "Need_Maintenance",
+    "positive_class": "Yes",
+    "negative_class": "No"
+}

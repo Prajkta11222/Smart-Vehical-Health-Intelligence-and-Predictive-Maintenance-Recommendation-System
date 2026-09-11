@@ -1,0 +1,20 @@
+{
+  "name": "smart-vehicle-health-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Vehicle Health Intelligence — AI-powered predictive maintenance platform",
+  "scripts": {
+    "start": "concurrently --kill-others-on-fail --raw --names \"API,UI\" --prefix-colors \"cyan.bold,magenta.bold\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "start:backend:prod": "python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000",
+    "start:frontend": "cd frontend && npm install --silent && npm run dev",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "start:frontend:prod": "cd frontend && npm run preview -- --host 0.0.0.0 --port 4173",
+    "test": "cd backend && python -m pytest tests/ -v",
+    "install:deps": "npm install && cd frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
