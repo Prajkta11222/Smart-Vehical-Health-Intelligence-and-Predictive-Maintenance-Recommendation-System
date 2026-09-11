@@ -22,10 +22,8 @@ services:
       - key: LOG_LEVEL
         value: INFO
 
-  - type: web
+  - type: static
     name: vehicle-health-ui
-    runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
