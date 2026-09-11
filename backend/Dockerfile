@@ -20,8 +20,4 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Health check — lightweight HTTP probe against the /api/v1/health endpoint
-HEALTHCHECK --interval=15s --timeout=10s --start-period=30s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

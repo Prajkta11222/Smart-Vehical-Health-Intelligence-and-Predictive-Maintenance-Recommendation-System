@@ -14,6 +14,7 @@ npm start
 ```
 
 `npm start` launches **both** services simultaneously in one terminal:
+
 - 🔵 **API** → `http://localhost:8000` (FastAPI + uvicorn, auto-reload)
 - 🟣 **UI**  → `http://localhost:5173` (Vite dev server)
 
@@ -26,7 +27,7 @@ API docs: `http://localhost:8000/docs`
 ## Prerequisites
 
 | Tool | Minimum version |
-|------|----------------|
+| --- | --- |
 | Python | 3.11+ |
 | Node.js | 18+ |
 | npm | 9+ |
@@ -42,7 +43,7 @@ copy .env.example .env
 ```
 
 | Variable | Purpose | Default |
-|----------|---------|---------|
+| --- | --- | --- |
 | `MODEL_DIR` | Path to the folder containing `final_selected_model.joblib` and `rf_xgb_preprocessor.joblib` | `./drive-download-20260820T190522Z-1-001` |
 | `DATASET_PATH` | Path to the raw CSV dataset (enables dataset exploration and vehicle analytics) | `./flex_fuel_predictive_maintenance_dataset_augmented.csv` |
 | `DATABASE_URL` | SQLAlchemy connection string for prediction history | SQLite fallback (`sqlite:///./vehicle_health.db`) or PostgreSQL |
@@ -57,6 +58,7 @@ docker compose up --build
 ```
 
 All three services start automatically:
+
 - 🐘 **Postgres** (`5432`) → Persistent database volume for prediction logs
 - 🔵 **FastAPI Backend** (`8000`) → High-performance inference API with auto-indexed dataset and ML models
 - 🌐 **Nginx Frontend** (`80` & `5173`) → Optimized React single-page app with built-in API reverse proxy
@@ -101,7 +103,7 @@ npm run start:frontend
 
 ## Project structure
 
-```
+```text
 vehical/
 ├── package.json               ← Root: npm start wires both services
 ├── backend/
